@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Premium Stream Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .spotify-gradient {
+            background: linear-gradient(135deg, #1DB954 0%, #191414 100%);
+        }
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .pulse-green {
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0%, 100% { background-color: #1DB954; }
+            50% { background-color: #1ed760; }
+        }
+        .rotate-animation {
+            animation: rotate 2s linear infinite;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    <script>
+        // API Configuration - Auto-detect environment
+        const API_CONFIG = {
+            development: {
+                baseURL: 'http://localhost:5000'
+            },
+            production: {
+                baseURL: window.location.protocol === 'https:' 
+                    ? 'YOUR_RENDER_BACKEND_URL_HERE'  // Will be replaced during deployment
+                    : 'http://localhost:5000'
+            }
+        };
+
+        // Detect environment
+        const ENV = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'development' 
+            : 'production';
+
+        // Get API base URL
+        const API_BASE_URL = API_CONFIG[ENV].baseURL;
+
+        // Helper function to make API calls
+        async function apiCall(endpoint, options = {}) {
+            const url = endpoint.startsWith('/api/') 
+                ? `${API_BASE_URL}${endpoint}`
+                : endpoint;
+            
+            return fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+        }
+
+        console.log(`Environment: ${ENV}, API Base URL: ${API_BASE_URL}`);
+    </script>
+</head>
+<body class="min-h-screen spotify-gradient text-white">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <div class="flex items-center justify-center mb-4">
+                <i class="fab fa-spotify text-6xl text-green-500 mr-4"></i>
+                <h1 class="text-5xl font-bold bg-gradient-to-r from-green-400 to-white bg-clip-text text-transparent">
+                    Spotify Premium Stream Bot
+                </h1>
+            </div>
+            <p class="text-xl text-gray-300">
+                Professional stream boosting with advanced stealth technology
+            </p>
+            <div class="mt-4 text-sm text-gray-400">
+                <span id="environment-indicator"></span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Configuration Panel -->
+                <div class="glass-morphism rounded-xl p-8">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fas fa-cogs mr-3 text-green-400"></i>
+                        Bot Configuration
+                    </h2>
+                    
+                    <form id="botForm" class="space-y-6">
+                        <!-- Spotify Credentials -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-green-400">Spotify Account</h3>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Username/Email</label>
+                                <input type="text" id="username" required
+                                       class="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Password</label>
+                                <input type="password" id="password" required
+                                       class="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            </div>
+                        </div>
+
+                        <!-- Playlist Configuration -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-green-400">Playlist Settings</h3>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Playlist URL</label>
+                                <input type="url" id="playlist_url" required placeholder="https://open.spotify.com/playlist/..."
+                                       class="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            </div>
+                        </div>
+
+                        <!-- Advanced Settings -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-green-400">Advanced Settings</h3>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Skip Rate (%)</label>
+                                    <input type="range" id="skip_probability" min="40" max="70" value="55" 
+                                           class="w-full accent-green-500">
+                                    <span id="skip_value" class="text-sm text-gray-400">55%</span>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Instances</label>
+                                    <select id="instances" class="w-full px-3 py-2 bg-black/30 border border-gray-600 rounded-lg">
+                                        <option value="1">1 Bot</option>
+                                        <option value="2">2 Bots</option>
+                                        <option value="3">3 Bots</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Min Play Time (s)</label>
+                                    <input type="number" id="min_play_time" value="32" min="20" max="60"
+                                           class="w-full px-3 py-2 bg-black/30 border border-gray-600 rounded-lg">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Max Play Time (s)</label>
+                                    <input type="number" id="max_play_time" value="45" min="40" max="90"
+                                           class="w-full px-3 py-2 bg-black/30 border border-gray-600 rounded-lg">
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" id="headless" checked class="rounded text-green-500">
+                                <label for="headless" class="text-sm">Run in headless mode (recommended)</label>
+                            </div>
+                        </div>
+
+                        <!-- Control Buttons -->
+                        <div class="flex space-x-4 pt-6">
+                            <button type="submit" id="startBtn" 
+                                    class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center">
+                                <i class="fas fa-play mr-3"></i>
+                                Start Streaming Bot
+                            </button>
+                            
+                            <button type="button" id="stopBtn" disabled
+                                    class="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center">
+                                <i class="fas fa-stop mr-3"></i>
+                                Stop Bot
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Status Panel -->
+                <div class="space-y-6">
+                    
+                    <!-- Live Status -->
+                    <div class="glass-morphism rounded-xl p-6">
+                        <h3 class="text-xl font-bold mb-4 flex items-center">
+                            <i class="fas fa-heartbeat mr-3 text-red-400"></i>
+                            Live Status
+                        </h3>
+                        
+                        <div id="statusCard" class="bg-black/20 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">Status</span>
+                                <div class="flex items-center">
+                                    <i id="statusIcon" class="fas fa-circle text-gray-500 mr-2"></i>
+                                    <span id="statusText">Idle</span>
+                                </div>
+                            </div>
+                            
+                            <div id="statusDetails" class="mt-3 text-sm text-gray-300">
+                                Ready to start streaming...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Statistics -->
+                    <div id="liveStats" class="glass-morphism rounded-xl p-6 hidden">
+                        <h3 class="text-xl font-bold mb-4 flex items-center">
+                            <i class="fas fa-chart-line mr-3 text-green-400"></i>
+                            Live Statistics
+                        </h3>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-black/20 rounded-lg p-4 text-center">
+                                <div class="text-2xl font-bold text-green-400" id="sessionsCount">0</div>
+                                <div class="text-sm text-gray-400">Active Sessions</div>
+                            </div>
+                            
+                            <div class="bg-black/20 rounded-lg p-4 text-center">
+                                <div class="text-2xl font-bold text-blue-400" id="uptime">00:00:00</div>
+                                <div class="text-sm text-gray-400">Uptime</div>
+                            </div>
+                            
+                            <div class="bg-black/20 rounded-lg p-4 text-center">
+                                <div class="text-2xl font-bold text-purple-400" id="streamsCount">0</div>
+                                <div class="text-sm text-gray-400">Total Streams</div>
+                            </div>
+                            
+                            <div class="bg-black/20 rounded-lg p-4 text-center">
+                                <div class="text-2xl font-bold text-yellow-400" id="skipRate">0%</div>
+                                <div class="text-sm text-gray-400">Skip Rate</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Log -->
+                    <div class="glass-morphism rounded-xl p-6">
+                        <h3 class="text-xl font-bold mb-4 flex items-center">
+                            <i class="fas fa-terminal mr-3 text-blue-400"></i>
+                            Activity Log
+                        </h3>
+                        
+                        <div id="logContainer" class="bg-black/30 rounded-lg p-4 h-64 overflow-y-auto font-mono text-sm">
+                            <div class="text-gray-400">System ready. Waiting for commands...</div>
+                        </div>
+                        
+                        <button id="clearLog" class="mt-3 text-sm text-gray-400 hover:text-white">
+                            <i class="fas fa-trash mr-2"></i>Clear Log
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let botRunning = false;
+        let currentSession = null;
+        let startTime = null;
+        let pollingInterval = null;
+
+        // DOM elements
+        const form = document.getElementById('botForm');
+        const startButton = document.getElementById('startBtn');
+        const stopButton = document.getElementById('stopBtn');
+        const skipSlider = document.getElementById('skip_probability');
+        const skipValue = document.getElementById('skip_value');
+        const logContainer = document.getElementById('logContainer');
+        const liveStats = document.getElementById('liveStats');
+
+        // Environment indicator
+        document.getElementById('environment-indicator').textContent = 
+            `Environment: ${ENV} | API: ${API_BASE_URL}`;
+
+        // Update skip rate display
+        skipSlider.addEventListener('input', (e) => {
+            skipValue.textContent = e.target.value + '%';
+        });
+
+        // Clear log functionality
+        document.getElementById('clearLog').addEventListener('click', () => {
+            logContainer.innerHTML = '<div class="text-gray-400">Log cleared...</div>';
+        });
+
+        // Add log entry
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            
+            let colorClass = 'text-gray-300';
+            let icon = 'fas fa-info-circle';
+            
+            switch(type) {
+                case 'success':
+                    colorClass = 'text-green-400';
+                    icon = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    colorClass = 'text-red-400';
+                    icon = 'fas fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    colorClass = 'text-yellow-400';
+                    icon = 'fas fa-exclamation-triangle';
+                    break;
+                case 'bot':
+                    colorClass = 'text-blue-400';
+                    icon = 'fas fa-robot';
+                    break;
+            }
+            
+            logEntry.innerHTML = `
+                <div class="${colorClass} mb-1">
+                    <span class="text-gray-500">[${timestamp}]</span>
+                    <i class="${icon} mr-2"></i>
+                    ${message}
+                </div>
+            `;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Update status display
+        function updateStatus(status, message, iconClass) {
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            const statusDetails = document.getElementById('statusDetails');
+            
+            statusIcon.className = iconClass;
+            statusText.textContent = message;
+            statusDetails.textContent = getStatusDetails(status);
+        }
+
+        function getStatusDetails(status) {
+            switch(status) {
+                case 'idle':
+                    return 'Ready to start streaming...';
+                case 'starting':
+                    return 'Initializing bot and connecting to Spotify...';
+                case 'running':
+                    return 'Bot is actively streaming your playlist';
+                case 'stopping':
+                    return 'Gracefully shutting down bot...';
+                case 'error':
+                    return 'An error occurred. Check the log for details.';
+                default:
+                    return 'Unknown status';
+            }
+        }
+
+        // Start polling for updates
+        function startPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            
+            pollingInterval = setInterval(async () => {
+                if (currentSession) {
+                    try {
+                        const response = await apiCall(`/api/bot-status/${currentSession}`);
+                        if (response.ok) {
+                            const result = await response.json();
+                            updateStatistics(result.status);
+                        }
+                    } catch (error) {
+                        console.error('Polling error:', error);
+                    }
+                }
+            }, 2000);
+        }
+
+        // Stop polling
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        // Update statistics
+        function updateStatistics(status) {
+            if (startTime) {
+                const uptime = Math.floor((new Date() - startTime) / 1000);
+                const hours = Math.floor(uptime / 3600);
+                const minutes = Math.floor((uptime % 3600) / 60);
+                const seconds = uptime % 60;
+                
+                document.getElementById('uptime').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            // Update other stats from status
+            if (status) {
+                document.getElementById('sessionsCount').textContent = '1';
+                document.getElementById('skipRate').textContent = Math.floor(status.config.skip_probability * 100) + '%';
+                
+                // Add recent logs
+                if (status.logs && status.logs.length > 0) {
+                    status.logs.forEach(log => {
+                        if (log.message && !log.message.includes('Bot subprocess')) {
+                            addLog(log.message, log.type);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (botRunning) {
+                addLog('❌ Bot is already running', 'error');
+                return;
+            }
+
+            // Get form data
+            const config = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                playlist_url: document.getElementById('playlist_url').value,
+                skip_probability: parseInt(document.getElementById('skip_probability').value) / 100,
+                instances: parseInt(document.getElementById('instances').value),
+                min_play_time: parseInt(document.getElementById('min_play_time').value),
+                max_play_time: parseInt(document.getElementById('max_play_time').value),
+                headless: document.getElementById('headless').checked
+            };
+
+            // Validate inputs
+            if (!config.playlist_url || !config.username || !config.password) {
+                addLog('❌ Please fill all required fields', 'error');
+                return;
+            }
+
+            if (!config.playlist_url.includes('spotify.com/playlist/')) {
+                addLog('❌ Please enter a valid Spotify playlist URL', 'error');
+                return;
+            }
+
+            // Update UI
+            botRunning = true;
+            startTime = new Date();
+            startButton.disabled = true;
+            startButton.innerHTML = '<i class="fas fa-spinner rotate-animation mr-3"></i>Starting...';
+            stopButton.disabled = false;
+            
+            updateStatus('starting', 'Starting bot...', 'fas fa-spinner rotate-animation text-yellow-400');
+            liveStats.classList.remove('hidden');
+
+            addLog('🚀 Starting Spotify Premium Stream Bot...', 'info');
+            addLog(`📋 Config: ${config.instances} instance(s), ${config.skip_probability*100}% skip rate`, 'info');
+            addLog(`🎵 Playlist: ${config.playlist_url}`, 'info');
+
+            try {
+                // Start the bot via API
+                const response = await apiCall('/api/start-bot', {
+                    method: 'POST',
+                    body: JSON.stringify(config)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    currentSession = result.session_id;
+                    
+                    updateStatus('running', 'Bot Running', 'fas fa-play-circle pulse-green');
+                    startButton.innerHTML = '<i class="fas fa-play mr-3"></i>Bot Running';
+                    
+                    addLog('✅ Bot started successfully!', 'success');
+                    addLog(`🆔 Session ID: ${currentSession}`, 'info');
+                    
+                    // Start polling for updates
+                    startPolling();
+                } else {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+            } catch (error) {
+                addLog(`❌ Failed to start bot: ${error.message}`, 'error');
+                
+                // Reset UI
+                botRunning = false;
+                startButton.disabled = false;
+                startButton.innerHTML = '<i class="fas fa-play mr-3"></i>Start Streaming Bot';
+                stopButton.disabled = true;
+                updateStatus('error', 'Error', 'fas fa-exclamation-circle text-red-400');
+                liveStats.classList.add('hidden');
+            }
+        });
+
+        // Stop button
+        stopButton.addEventListener('click', async () => {
+            if (!botRunning || !currentSession) {
+                addLog('❌ No bot session to stop', 'error');
+                return;
+            }
+
+            stopButton.disabled = true;
+            stopButton.innerHTML = '<i class="fas fa-spinner rotate-animation mr-3"></i>Stopping...';
+            updateStatus('stopping', 'Stopping bot...', 'fas fa-spinner rotate-animation text-yellow-400');
+
+            addLog('🛑 Stopping bot...', 'info');
+
+            try {
+                const response = await apiCall(`/api/stop-bot/${currentSession}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    addLog('✅ Bot stopped successfully!', 'success');
+                } else {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+            } catch (error) {
+                addLog(`❌ Failed to stop bot: ${error.message}`, 'error');
+            } finally {
+                // Reset UI
+                botRunning = false;
+                currentSession = null;
+                startTime = null;
+                
+                startButton.disabled = false;
+                startButton.innerHTML = '<i class="fas fa-play mr-3"></i>Start Streaming Bot';
+                stopButton.disabled = true;
+                stopButton.innerHTML = '<i class="fas fa-stop mr-3"></i>Stop Bot';
+                
+                updateStatus('idle', 'Idle', 'fas fa-circle text-gray-500');
+                liveStats.classList.add('hidden');
+                
+                stopPolling();
+            }
+        });
+
+        // Initialize
+        addLog('🎵 Spotify Premium Stream Bot ready!', 'success');
+        addLog(`🌐 Environment: ${ENV}`, 'info');
+        addLog('💡 Fill in your credentials and playlist URL to start', 'info');
+    </script>
+</body>
+</html>

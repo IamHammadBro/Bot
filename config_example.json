@@ -1,0 +1,14 @@
+[
+  {
+    "bot_id": "spotify_bot_1",
+    "username": "arshadahsan388@gmail.com",
+    "password": "Check78600",
+    "playlist_url": "https://open.spotify.com/playlist/5muSk2zfQ3LI70S64jbrX7?si=d5xrwoM_T2--yHFfRsd9rw",
+    "headless": false,
+    "skip_probability": 0.55,
+    "min_play_time": 32,
+    "max_play_time": 45,
+    "double_skip_probability": 0.15,
+    "backward_skip_probability": 0.08
+  }
+]
